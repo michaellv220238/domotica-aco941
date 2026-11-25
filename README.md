@@ -15,7 +15,7 @@ Un ESP32 lee 4 sensores y controla 4 actuadores. Todo viaja por **MQTT** al serv
 Ubuntu de la Fase 3, donde **Node-RED** muestra el dashboard y guarda el historial en
 **PostgreSQL**, que **Grafana** grafica.
 
-**Simulación en Wokwi:** [AGREGAR ENLACE DEL PROYECTO WOKWI]
+**Simulación en Wokwi:** https://wokwi.com/projects/481692131730253825
 
 ## Arquitectura
 
