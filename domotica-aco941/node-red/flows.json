@@ -1,0 +1,890 @@
+[
+  {
+    "id": "tab_domotica",
+    "type": "tab",
+    "label": "Domótica ACO941",
+    "disabled": false,
+    "info": "Dashboard y registro en PostgreSQL"
+  },
+  {
+    "id": "broker_local",
+    "type": "mqtt-broker",
+    "name": "Mosquitto local",
+    "broker": "localhost",
+    "port": "1883",
+    "clientid": "",
+    "autoConnect": true,
+    "usetls": false,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true,
+    "birthTopic": "",
+    "birthQos": "0",
+    "birthPayload": "",
+    "closeTopic": "",
+    "closeQos": "0",
+    "closePayload": "",
+    "willTopic": "",
+    "willQos": "0",
+    "willPayload": ""
+  },
+  {
+    "id": "pg_domotica",
+    "type": "postgreSQLConfig",
+    "name": "domotica",
+    "host": "127.0.0.1",
+    "hostFieldType": "str",
+    "port": 5432,
+    "portFieldType": "num",
+    "database": "domotica",
+    "databaseFieldType": "str",
+    "ssl": "false",
+    "sslFieldType": "bool",
+    "applicationName": "",
+    "applicationNameType": "str",
+    "max": 10,
+    "maxFieldType": "num",
+    "idle": 1000,
+    "idleFieldType": "num",
+    "connectionTimeout": 10000,
+    "connectionTimeoutFieldType": "num",
+    "user": "nodered",
+    "userFieldType": "str",
+    "password": "CAMBIAR_CLAVE",
+    "passwordFieldType": "str"
+  },
+  {
+    "id": "ui_tab_casa",
+    "type": "ui_tab",
+    "name": "Casa",
+    "icon": "dashboard",
+    "order": 1,
+    "disabled": false,
+    "hidden": false
+  },
+  {
+    "id": "g_sens",
+    "type": "ui_group",
+    "name": "Sensores",
+    "tab": "ui_tab_casa",
+    "order": 1,
+    "disp": true,
+    "width": "6",
+    "collapse": false
+  },
+  {
+    "id": "g_hist",
+    "type": "ui_group",
+    "name": "Historial",
+    "tab": "ui_tab_casa",
+    "order": 2,
+    "disp": true,
+    "width": "6",
+    "collapse": false
+  },
+  {
+    "id": "g_ctrl",
+    "type": "ui_group",
+    "name": "Control",
+    "tab": "ui_tab_casa",
+    "order": 3,
+    "disp": true,
+    "width": "6",
+    "collapse": false
+  },
+  {
+    "id": "n0002",
+    "type": "function",
+    "name": "a parámetros SQL (lectura)",
+    "func": "const t = msg.topic.replace('udb-aco941/lv220238/casa/', '');\nconst v = parseFloat(msg.payload);\nif (isNaN(v)) return null;\nmsg.params = [t, v];\nreturn msg;",
+    "outputs": 1,
+    "wires": [
+      [
+        "n0001"
+      ]
+    ],
+    "z": "tab_domotica",
+    "x": 680,
+    "y": 40
+  },
+  {
+    "id": "n0001",
+    "type": "postgresql",
+    "name": "INSERT lecturas",
+    "query": "INSERT INTO lecturas (sensor, valor) VALUES ($1, $2);",
+    "postgreSQLConfig": "pg_domotica",
+    "split": false,
+    "rowsPerMsg": 1,
+    "outputs": 1,
+    "wires": [
+      []
+    ],
+    "z": "tab_domotica",
+    "x": 940,
+    "y": 40
+  },
+  {
+    "id": "n0004",
+    "type": "function",
+    "name": "a parámetros SQL (evento)",
+    "func": "// tópico: .../zona/actuador/estado  o  .../alarma/estado\nconst t = msg.topic.replace('udb-aco941/lv220238/casa/', '').replace(/\\/estado$/, '');\nmsg.params = [t, String(msg.payload)];\nreturn msg;",
+    "outputs": 1,
+    "wires": [
+      [
+        "n0003"
+      ]
+    ],
+    "z": "tab_domotica",
+    "x": 680,
+    "y": 100
+  },
+  {
+    "id": "n0003",
+    "type": "postgresql",
+    "name": "INSERT eventos",
+    "query": "INSERT INTO eventos (actuador, estado) VALUES ($1, $2);",
+    "postgreSQLConfig": "pg_domotica",
+    "split": false,
+    "rowsPerMsg": 1,
+    "outputs": 1,
+    "wires": [
+      []
+    ],
+    "z": "tab_domotica",
+    "x": 940,
+    "y": 100
+  },
+  {
+    "id": "n0006",
+    "type": "ui_gauge",
+    "name": "Temperatura",
+    "group": "g_sens",
+    "order": 1,
+    "width": 3,
+    "height": 3,
+    "gtype": "gage",
+    "title": "Temperatura",
+    "label": "°C",
+    "format": "{{value}}",
+    "min": 0,
+    "max": 50,
+    "colors": [
+      "#00b500",
+      "#e6e600",
+      "#ca3838"
+    ],
+    "seg1": "",
+    "seg2": "",
+    "className": "",
+    "wires": [],
+    "z": "tab_domotica",
+    "x": 420,
+    "y": 180
+  },
+  {
+    "id": "n0007",
+    "type": "mqtt in",
+    "name": "Temperatura",
+    "topic": "udb-aco941/lv220238/casa/sala/temperatura",
+    "qos": "1",
+    "datatype": "utf8",
+    "broker": "broker_local",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "wires": [
+      [
+        "n0006",
+        "n0002",
+        "n0019"
+      ]
+    ],
+    "z": "tab_domotica",
+    "x": 170,
+    "y": 180
+  },
+  {
+    "id": "n0008",
+    "type": "ui_gauge",
+    "name": "Humedad",
+    "group": "g_sens",
+    "order": 2,
+    "width": 3,
+    "height": 3,
+    "gtype": "gage",
+    "title": "Humedad",
+    "label": "%",
+    "format": "{{value}}",
+    "min": 0,
+    "max": 100,
+    "colors": [
+      "#00b500",
+      "#e6e600",
+      "#ca3838"
+    ],
+    "seg1": "",
+    "seg2": "",
+    "className": "",
+    "wires": [],
+    "z": "tab_domotica",
+    "x": 420,
+    "y": 240
+  },
+  {
+    "id": "n0009",
+    "type": "mqtt in",
+    "name": "Humedad",
+    "topic": "udb-aco941/lv220238/casa/sala/humedad",
+    "qos": "1",
+    "datatype": "utf8",
+    "broker": "broker_local",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "wires": [
+      [
+        "n0008",
+        "n0002",
+        "n0020"
+      ]
+    ],
+    "z": "tab_domotica",
+    "x": 170,
+    "y": 240
+  },
+  {
+    "id": "n0010",
+    "type": "ui_gauge",
+    "name": "Luz",
+    "group": "g_sens",
+    "order": 3,
+    "width": 3,
+    "height": 3,
+    "gtype": "gage",
+    "title": "Luz",
+    "label": "%",
+    "format": "{{value}}",
+    "min": 0,
+    "max": 100,
+    "colors": [
+      "#00b500",
+      "#e6e600",
+      "#ca3838"
+    ],
+    "seg1": "",
+    "seg2": "",
+    "className": "",
+    "wires": [],
+    "z": "tab_domotica",
+    "x": 420,
+    "y": 300
+  },
+  {
+    "id": "n0011",
+    "type": "mqtt in",
+    "name": "Luz",
+    "topic": "udb-aco941/lv220238/casa/exterior/luz",
+    "qos": "1",
+    "datatype": "utf8",
+    "broker": "broker_local",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "wires": [
+      [
+        "n0010",
+        "n0002"
+      ]
+    ],
+    "z": "tab_domotica",
+    "x": 170,
+    "y": 300
+  },
+  {
+    "id": "n0012",
+    "type": "ui_gauge",
+    "name": "Gas",
+    "group": "g_sens",
+    "order": 4,
+    "width": 3,
+    "height": 3,
+    "gtype": "donut",
+    "title": "Gas",
+    "label": "%",
+    "format": "{{value}}",
+    "min": 0,
+    "max": 100,
+    "colors": [
+      "#00b500",
+      "#e6e600",
+      "#ca3838"
+    ],
+    "seg1": "",
+    "seg2": "",
+    "className": "",
+    "wires": [],
+    "z": "tab_domotica",
+    "x": 420,
+    "y": 360
+  },
+  {
+    "id": "n0013",
+    "type": "mqtt in",
+    "name": "Gas",
+    "topic": "udb-aco941/lv220238/casa/cocina/gas",
+    "qos": "1",
+    "datatype": "utf8",
+    "broker": "broker_local",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "wires": [
+      [
+        "n0012",
+        "n0002"
+      ]
+    ],
+    "z": "tab_domotica",
+    "x": 170,
+    "y": 360
+  },
+  {
+    "id": "n0014",
+    "type": "ui_text",
+    "group": "g_sens",
+    "order": 5,
+    "width": 6,
+    "height": 1,
+    "name": "Movimiento",
+    "label": "Movimiento (pasillo)",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "className": "",
+    "wires": [],
+    "z": "tab_domotica",
+    "x": 680,
+    "y": 420
+  },
+  {
+    "id": "n0015",
+    "type": "function",
+    "name": "texto movimiento",
+    "func": "msg.payload = String(msg.payload) === '1' ? 'Detectado' : 'Sin movimiento';\nreturn msg;",
+    "outputs": 1,
+    "wires": [
+      [
+        "n0014"
+      ]
+    ],
+    "z": "tab_domotica",
+    "x": 420,
+    "y": 420
+  },
+  {
+    "id": "n0016",
+    "type": "mqtt in",
+    "name": "Movimiento",
+    "topic": "udb-aco941/lv220238/casa/pasillo/movimiento",
+    "qos": "1",
+    "datatype": "utf8",
+    "broker": "broker_local",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "wires": [
+      [
+        "n0015",
+        "n0002"
+      ]
+    ],
+    "z": "tab_domotica",
+    "x": 170,
+    "y": 420
+  },
+  {
+    "id": "n0017",
+    "type": "ui_text",
+    "group": "g_sens",
+    "order": 6,
+    "width": 6,
+    "height": 1,
+    "name": "Estado ESP32",
+    "label": "ESP32",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "className": "",
+    "wires": [],
+    "z": "tab_domotica",
+    "x": 420,
+    "y": 480
+  },
+  {
+    "id": "n0018",
+    "type": "mqtt in",
+    "name": "Estado ESP32",
+    "topic": "udb-aco941/lv220238/casa/dispositivo/estado",
+    "qos": "1",
+    "datatype": "utf8",
+    "broker": "broker_local",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "wires": [
+      [
+        "n0017"
+      ]
+    ],
+    "z": "tab_domotica",
+    "x": 170,
+    "y": 480
+  },
+  {
+    "id": "n0005",
+    "type": "ui_chart",
+    "name": "Temp/Hum",
+    "group": "g_hist",
+    "order": 1,
+    "width": 6,
+    "height": 4,
+    "label": "Temperatura y humedad (última hora)",
+    "chartType": "line",
+    "legend": "true",
+    "xformat": "HH:mm",
+    "interpolate": "linear",
+    "nodata": "Esperando datos...",
+    "dot": false,
+    "ymin": "",
+    "ymax": "",
+    "removeOlder": 1,
+    "removeOlderPoints": "",
+    "removeOlderUnit": "3600",
+    "cutout": 0,
+    "useOneColor": false,
+    "useUTC": false,
+    "colors": [
+      "#1f77b4",
+      "#ff7f0e",
+      "#2ca02c",
+      "#d62728",
+      "#9467bd",
+      "#8c564b",
+      "#e377c2",
+      "#7f7f7f",
+      "#bcbd22"
+    ],
+    "outputs": 1,
+    "useDifferentColor": false,
+    "className": "",
+    "wires": [
+      []
+    ],
+    "z": "tab_domotica",
+    "x": 680,
+    "y": 560
+  },
+  {
+    "id": "n0019",
+    "type": "function",
+    "name": "serie Temperatura",
+    "func": "msg.topic = 'Temperatura';\nreturn msg;",
+    "outputs": 1,
+    "wires": [
+      [
+        "n0005"
+      ]
+    ],
+    "z": "tab_domotica",
+    "x": 420,
+    "y": 560
+  },
+  {
+    "id": "n0020",
+    "type": "function",
+    "name": "serie Humedad",
+    "func": "msg.topic = 'Humedad';\nreturn msg;",
+    "outputs": 1,
+    "wires": [
+      [
+        "n0005"
+      ]
+    ],
+    "z": "tab_domotica",
+    "x": 420,
+    "y": 560
+  },
+  {
+    "id": "n0022",
+    "type": "mqtt out",
+    "name": "Luz sala /set",
+    "topic": "udb-aco941/lv220238/casa/sala/luz/set",
+    "qos": "1",
+    "retain": "false",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "broker_local",
+    "wires": [],
+    "z": "tab_domotica",
+    "x": 900,
+    "y": 640
+  },
+  {
+    "id": "n0021",
+    "type": "ui_switch",
+    "name": "Luz sala",
+    "label": "Luz sala",
+    "tooltip": "",
+    "group": "g_ctrl",
+    "order": 1,
+    "width": 6,
+    "height": 1,
+    "passthru": false,
+    "decouple": "true",
+    "topic": "topic",
+    "topicType": "msg",
+    "style": "",
+    "onvalue": "ON",
+    "onvalueType": "str",
+    "onicon": "",
+    "oncolor": "",
+    "offvalue": "OFF",
+    "offvalueType": "str",
+    "officon": "",
+    "offcolor": "",
+    "animate": true,
+    "className": "",
+    "wires": [
+      [
+        "n0022"
+      ]
+    ],
+    "z": "tab_domotica",
+    "x": 680,
+    "y": 640
+  },
+  {
+    "id": "n0023",
+    "type": "mqtt in",
+    "name": "Luz sala estado",
+    "topic": "udb-aco941/lv220238/casa/sala/luz/estado",
+    "qos": "1",
+    "datatype": "utf8",
+    "broker": "broker_local",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "wires": [
+      [
+        "n0021",
+        "n0004"
+      ]
+    ],
+    "z": "tab_domotica",
+    "x": 170,
+    "y": 640
+  },
+  {
+    "id": "n0025",
+    "type": "mqtt out",
+    "name": "Ventilador /set",
+    "topic": "udb-aco941/lv220238/casa/cocina/ventilador/set",
+    "qos": "1",
+    "retain": "false",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "broker_local",
+    "wires": [],
+    "z": "tab_domotica",
+    "x": 900,
+    "y": 700
+  },
+  {
+    "id": "n0024",
+    "type": "ui_switch",
+    "name": "Ventilador",
+    "label": "Ventilador",
+    "tooltip": "",
+    "group": "g_ctrl",
+    "order": 2,
+    "width": 6,
+    "height": 1,
+    "passthru": false,
+    "decouple": "true",
+    "topic": "topic",
+    "topicType": "msg",
+    "style": "",
+    "onvalue": "ON",
+    "onvalueType": "str",
+    "onicon": "",
+    "oncolor": "",
+    "offvalue": "OFF",
+    "offvalueType": "str",
+    "officon": "",
+    "offcolor": "",
+    "animate": true,
+    "className": "",
+    "wires": [
+      [
+        "n0025"
+      ]
+    ],
+    "z": "tab_domotica",
+    "x": 680,
+    "y": 700
+  },
+  {
+    "id": "n0026",
+    "type": "mqtt in",
+    "name": "Ventilador estado",
+    "topic": "udb-aco941/lv220238/casa/cocina/ventilador/estado",
+    "qos": "1",
+    "datatype": "utf8",
+    "broker": "broker_local",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "wires": [
+      [
+        "n0024",
+        "n0004"
+      ]
+    ],
+    "z": "tab_domotica",
+    "x": 170,
+    "y": 700
+  },
+  {
+    "id": "n0028",
+    "type": "mqtt out",
+    "name": "Alarma /set",
+    "topic": "udb-aco941/lv220238/casa/alarma/set",
+    "qos": "1",
+    "retain": "false",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "broker_local",
+    "wires": [],
+    "z": "tab_domotica",
+    "x": 900,
+    "y": 760
+  },
+  {
+    "id": "n0027",
+    "type": "ui_switch",
+    "name": "Alarma",
+    "label": "Alarma",
+    "tooltip": "",
+    "group": "g_ctrl",
+    "order": 3,
+    "width": 6,
+    "height": 1,
+    "passthru": false,
+    "decouple": "true",
+    "topic": "topic",
+    "topicType": "msg",
+    "style": "",
+    "onvalue": "ON",
+    "onvalueType": "str",
+    "onicon": "",
+    "oncolor": "",
+    "offvalue": "OFF",
+    "offvalueType": "str",
+    "officon": "",
+    "offcolor": "",
+    "animate": true,
+    "className": "",
+    "wires": [
+      [
+        "n0028"
+      ]
+    ],
+    "z": "tab_domotica",
+    "x": 680,
+    "y": 760
+  },
+  {
+    "id": "n0029",
+    "type": "mqtt in",
+    "name": "Alarma estado",
+    "topic": "udb-aco941/lv220238/casa/alarma/estado",
+    "qos": "1",
+    "datatype": "utf8",
+    "broker": "broker_local",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "wires": [
+      [
+        "n0027",
+        "n0004"
+      ]
+    ],
+    "z": "tab_domotica",
+    "x": 170,
+    "y": 760
+  },
+  {
+    "id": "n0031",
+    "type": "mqtt out",
+    "name": "Cerradura abierta /set",
+    "topic": "udb-aco941/lv220238/casa/entrada/cerradura/set",
+    "qos": "1",
+    "retain": "false",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "broker_local",
+    "wires": [],
+    "z": "tab_domotica",
+    "x": 900,
+    "y": 820
+  },
+  {
+    "id": "n0030",
+    "type": "ui_switch",
+    "name": "Cerradura abierta",
+    "label": "Cerradura abierta",
+    "tooltip": "",
+    "group": "g_ctrl",
+    "order": 4,
+    "width": 6,
+    "height": 1,
+    "passthru": false,
+    "decouple": "true",
+    "topic": "topic",
+    "topicType": "msg",
+    "style": "",
+    "onvalue": "UNLOCK",
+    "onvalueType": "str",
+    "onicon": "",
+    "oncolor": "",
+    "offvalue": "LOCK",
+    "offvalueType": "str",
+    "officon": "",
+    "offcolor": "",
+    "animate": true,
+    "className": "",
+    "wires": [
+      [
+        "n0031"
+      ]
+    ],
+    "z": "tab_domotica",
+    "x": 680,
+    "y": 820
+  },
+  {
+    "id": "n0032",
+    "type": "mqtt in",
+    "name": "Cerradura abierta estado",
+    "topic": "udb-aco941/lv220238/casa/entrada/cerradura/estado",
+    "qos": "1",
+    "datatype": "utf8",
+    "broker": "broker_local",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "wires": [
+      [
+        "n0030",
+        "n0004"
+      ]
+    ],
+    "z": "tab_domotica",
+    "x": 170,
+    "y": 820
+  },
+  {
+    "id": "n0034",
+    "type": "mqtt out",
+    "name": "Modo automático /set",
+    "topic": "udb-aco941/lv220238/casa/modo/set",
+    "qos": "1",
+    "retain": "false",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "broker_local",
+    "wires": [],
+    "z": "tab_domotica",
+    "x": 900,
+    "y": 880
+  },
+  {
+    "id": "n0033",
+    "type": "ui_switch",
+    "name": "Modo automático",
+    "label": "Modo automático",
+    "tooltip": "",
+    "group": "g_ctrl",
+    "order": 5,
+    "width": 6,
+    "height": 1,
+    "passthru": false,
+    "decouple": "true",
+    "topic": "topic",
+    "topicType": "msg",
+    "style": "",
+    "onvalue": "AUTO",
+    "onvalueType": "str",
+    "onicon": "",
+    "oncolor": "",
+    "offvalue": "MANUAL",
+    "offvalueType": "str",
+    "officon": "",
+    "offcolor": "",
+    "animate": true,
+    "className": "",
+    "wires": [
+      [
+        "n0034"
+      ]
+    ],
+    "z": "tab_domotica",
+    "x": 680,
+    "y": 880
+  },
+  {
+    "id": "n0035",
+    "type": "mqtt in",
+    "name": "Modo automático estado",
+    "topic": "udb-aco941/lv220238/casa/modo/estado",
+    "qos": "1",
+    "datatype": "utf8",
+    "broker": "broker_local",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "wires": [
+      [
+        "n0033"
+      ]
+    ],
+    "z": "tab_domotica",
+    "x": 170,
+    "y": 880
+  }
+]
