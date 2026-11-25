@@ -89,7 +89,7 @@ void onMensaje(char* topic, byte* payload, unsigned int len) {
 
 void conectarWiFi() {
   Serial.print("WiFi...");
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  WiFi.begin(WIFI_SSID, WIFI_PASS, 6);  // canal 6: conexión rápida en Wokwi
   while (WiFi.status() != WL_CONNECTED) { delay(250); Serial.print("."); }
   Serial.println(" conectado");
 }
