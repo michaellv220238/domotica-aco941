@@ -26,8 +26,7 @@ Ubuntu de la Fase 3, donde **Node-RED** muestra el dashboard y guarda el histori
 
 Diagrama: `docs/arquitectura.svg`
 
-Servidor de la Fase 3 (Ubuntu Server, **instalación nativa, sin Docker**):
-DNS (bind9), servidor web, Node-RED, Grafana, MongoDB y PostgreSQL, más Mosquitto como broker MQTT.
+El despliegue probado usa **Ubuntu Server 24.04 y Docker Compose** para Mosquitto, Node-RED, PostgreSQL y Grafana. El navegador accede a los servicios web mediante un túnel SSH.
 
 ## Hardware
 
@@ -73,34 +72,86 @@ Las reglas corren en el ESP32, así la casa sigue respondiendo aunque falle el s
 
 ## Cómo ejecutarlo
 
-1. **Simulación:** en wokwi.com crear un proyecto ESP32 y pegar `firmware/sketch.ino`,
-   `firmware/diagram.json` y `firmware/libraries.txt` (pestaña Library Manager).
-2. **Mosquitto (servidor):**
+### 1. Levantar los servicios en Ubuntu
+
+Requisitos: Ubuntu Server 24.04, Docker Engine y Docker Compose. Desde la
+raíz del repositorio clonado en la VM:
+
+```bash
+cd compose-lab
+(umask 077; set -o noclobber; printf 'PG_PASSWORD=%s\n' "$(openssl rand -hex 24)" > .env)
+sudo install -d -o 1000 -g 1000 data/nodered
+sudo install -d -o 472 -g 0 data/grafana
+sudo docker compose run --rm --no-deps -T --entrypoint npm nodered install --prefix /data --no-audit --no-fund node-red-dashboard@3.6.6 node-red-contrib-postgresql@0.16.2
+sudo docker compose up -d
+sudo docker compose ps
+```
+
+Creen el archivo `.env` una sola vez por instalación. No lo regeneren con una
+base de datos ya inicializada. La primera vez, PostgreSQL ejecuta
+`servidor/base_datos.sql` mediante `compose-lab/init-db.sh` y crea los usuarios
+nodered y `grafana_ro`. Los datos y las credenciales locales se guardan fuera
+del control de versiones.
+
+### 2. Abrir el dashboard y Grafana
+
+La VM de la demo usa NAT con el puerto SSH 2222 del anfitrión reenviado al
+22 de Ubuntu. Los puertos web quedan accesibles por un túnel SSH. Ejecuten
+este comando en el anfitrión con el usuario de su VM:
+
+```bash
+ssh -N -L 1880:127.0.0.1:1880 -L 3000:127.0.0.1:3000 -p 2222 user@127.0.0.1
+```
+
+- [Editor de Node-RED](http://127.0.0.1:1880/)
+- [Dashboard de domótica](http://127.0.0.1:1880/ui)
+- [Grafana](http://127.0.0.1:3000/)
+
+En el editor de Node-RED, importen `node-red/flows.json` desde el menú
+**Importar**. Ajusten estas dos conexiones compartidas e instancien el flujo:
+
+| Conexión | Configuración |
+|---|---|
+| MQTT | Host mosquitto, puerto 1883 |
+| PostgreSQL | Host `postgres`, puerto `5432`, base `domotica`, usuario `nodered` y la clave `PG_PASSWORD` del archivo `.env` |
+
+En Grafana, cambien la contraseña de administrador en el primer inicio.
+Agreguen una fuente PostgreSQL con host `postgres:5432`, base domotica,
+usuario `grafana_ro` y la clave `PG_PASSWORD`. Para la conexión interna de Compose,
+seleccionen **TLS/SSL Mode → disable**. Usen las consultas de
+`servidor/grafana_consultas.sql` para crear los paneles.
+
+### 3. Probar la simulación
+
+1. Abran el proyecto de Wokwi. Para recrearlo, usen los tres archivos de
+   firmware/ en un proyecto ESP32. Mantengan Wokwi y el dashboard visibles
+   en ventanas separadas durante la prueba.
+2. Cambien la temperatura del DHT22 y comprueben que el nuevo valor aparezca
+   en el dashboard y en Grafana. Para verificar el registro en PostgreSQL:
+
    ```bash
-   sudo apt install -y mosquitto mosquitto-clients
-   sudo cp servidor/bridge.conf /etc/mosquitto/conf.d/
-   sudo systemctl restart mosquitto && systemctl status mosquitto
+   sudo docker compose exec postgres psql -U postgres -d domotica -c "SELECT ts, valor FROM lecturas WHERE sensor = 'sala/temperatura' ORDER BY ts DESC LIMIT 5;"
    ```
-3. **PostgreSQL:** cambiar `CAMBIAR_CLAVE` y ejecutar
-   `sudo -u postgres psql -f servidor/base_datos.sql`.
-4. **Node-RED** (`http://IP-SERVIDOR:1880`): en *Manage palette* instalar
-   `node-red-dashboard` y `node-red-contrib-postgresql`, luego *Import* → `node-red/flows.json`.
-   Poner la contraseña real en el nodo de configuración `domotica` y hacer *Deploy*.
-   El dashboard queda en `http://IP-SERVIDOR:1880/ui`.
-5. **Grafana** (`http://IP-SERVIDOR:3000`): agregar la fuente de datos PostgreSQL
-   (usuario `grafana_ro`) y crear los paneles con `servidor/grafana_consultas.sql`.
-6. **Prueba:** mover los controles del DHT22 y del MQ-2 y activar el PIR en Wokwi; los
-   cambios se ven en el dashboard. Desde el dashboard se accionan luz, ventilador, alarma y
-   cerradura. Para ver los mensajes:
+
+3. Cambien a modo manual y usen el dashboard para encender y apagar la luz.
+   Verifiquen la respuesta del LED en Wokwi. Repitan la prueba para el
+   ventilador, la alarma y la cerradura.
+4. Para revisar los mensajes en la VM:
+
    ```bash
-   mosquitto_sub -h localhost -t 'udb-aco941/lv220238/casa/#' -v
+   sudo docker compose exec mosquitto mosquitto_sub -h 127.0.0.1 -t 'udb-aco941/lv220238/casa/#' -v -W 20
    ```
+
+Si hay más de una copia del servidor, usen un `remote_clientid` distinto por
+copia en `compose-lab/mosquitto.conf`. Para ensayar con el proyecto compartido
+usen una sola simulación activa a la vez.
 
 ## Estructura del repositorio
 
 ```
 firmware/    sketch.ino, diagram.json, libraries.txt
-servidor/    bridge.conf, base_datos.sql, grafana_consultas.sql
+servidor/    configuración de referencia y SQL
+compose-lab/ configuración del despliegue en la VM
 node-red/    flows.json (dashboard + registro en PostgreSQL)
 docs/        arquitectura.svg
 evidencias/  capturas del avance
@@ -108,5 +159,8 @@ evidencias/  capturas del avance
 
 ## Limitaciones y mejoras futuras
 
-- Es una simulación; el broker público no tiene autenticación.
+- Es una simulación con un broker MQTT público sin autenticación. Usen datos de prueba.
+- Nginx, DNS con BIND9 y MongoDB quedan pendientes de integrar en el despliegue de la VM.
 - Mejoras: usuario, contraseña y TLS en MQTT; un ESP32 por planta; avisos al celular.
+
+
