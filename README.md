@@ -159,8 +159,7 @@ evidencias/  capturas del avance
 
 ## Limitaciones y mejoras futuras
 
-- Es una simulación con un broker MQTT público sin autenticación. Usen datos de prueba.
-- Nginx, DNS con BIND9 y MongoDB quedan pendientes de integrar en el despliegue de la VM.
-- Mejoras: usuario, contraseña y TLS en MQTT; un ESP32 por planta; avisos al celular.
+- Es una simulación con un broker MQTT público sin autenticación.
+- Nginx, DNS con BIND9 y MongoDB quedan pendientes de integrar en el despliegue de la VM por tiempo nose pudo implementar .
 
 
